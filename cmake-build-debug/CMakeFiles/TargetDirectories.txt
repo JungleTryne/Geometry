@@ -1,0 +1,3 @@
+/home/jungletryne/development/Geometry/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/home/jungletryne/development/Geometry/cmake-build-debug/CMakeFiles/GeometricShapes.dir
+/home/jungletryne/development/Geometry/cmake-build-debug/CMakeFiles/edit_cache.dir
