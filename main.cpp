@@ -16,6 +16,7 @@ struct Point {
     bool operator!=(const Point& other) const;
 
     double getLength() const;
+    void rotate(double angle);
 };
 
 Point::Point(double x, double y) {
@@ -40,8 +41,21 @@ double Point::getLength() const {
     return sqrt(this->x * this->x + this->y * this->y);
 }
 
+void Point::rotate(double angle) {
+    //angle в радианах
+    double newX = this->x*cos(angle) - this->y*sin(angle);
+    double newY = this->x*sin(angle) + this->y*cos(angle);
+    this->x = newX;
+    this->y = newY;
+}
+
 Point operator-(const Point& one, const Point& two) {
     Point newPoint(one.x - two.x, one.y - two.y);
+    return newPoint;
+}
+
+Point operator+ (const Point& one, const Point& two) {
+    Point newPoint(one.x + two.x, one.y + two.y);
     return newPoint;
 }
 
@@ -128,7 +142,6 @@ public:
     bool operator==(const Polygon& other) const;
     bool isCongruentTo(const Polygon& other) const;
     bool isSimilarTo(const Polygon& other) const;
-    bool containsPoint(const Point& point) const override;
 
 };
 
@@ -199,8 +212,87 @@ bool Polygon::isCongruentTo(const Polygon &other) const {
 
 }
 
-bool Polygon::containsPoint(const Point &point) const {
-    return false;
+class Ellipse : public Shape {
+private:
+    std::pair<Point, Point> focuses;
+    double constSum;
+    std::pair<double, double> getAxis() const;
+public:
+    Ellipse(const std::pair<Point, Point>& focuses, double constSum);
+    double perimeter() const override;
+    double area() const override;
+    bool operator==(const Ellipse& other) const;
+    bool isCongruent(const Ellipse& other) const;
+    bool isSimilarTo(const Ellipse& other) const;
+    bool containsPoint(const Point& point) const override;
+
+    void rotate(const Point& center, double angle) override;
+    void reflex(const Line& axis) override;
+};
+
+Ellipse::Ellipse(const std::pair<Point, Point>& focuses, double constSum) {
+    this->focuses = focuses;
+    this->constSum = constSum;
+}
+
+std::pair<double, double> Ellipse::getAxis() const {
+    double cathet = (focuses.first - focuses.second).getLength() / 2;
+    double hypotenuse = constSum/2;
+    double smallAxis = sqrt(hypotenuse*hypotenuse - cathet*cathet);
+    double bigAxis = constSum/2;
+    return std::make_pair(smallAxis, bigAxis);
+}
+
+double Ellipse::perimeter() const {
+    std::pair<double, double> axis = this->getAxis();
+    double smallAxis = axis.first;
+    double bigAxis = axis.second;
+    double finalPerimeter = 2*3.1415926535*sqrt((smallAxis*smallAxis + bigAxis*bigAxis)/2);
+    return finalPerimeter;
+}
+
+double Ellipse::area() const {
+    std::pair<double, double> axis = this->getAxis();
+    double smallAxis = axis.first;
+    double bigAxis = axis.second;
+    double finalArea = 3.1415926535*smallAxis*bigAxis;
+    return finalArea;
+}
+
+bool Ellipse::operator==(const Ellipse &other) const {
+    return this->focuses == other.focuses && this->constSum == other.constSum;
+}
+
+bool Ellipse::isCongruent(const Ellipse &other) const {
+    return (this->focuses.first - this->focuses.second).getLength() == (other.focuses.first-other.focuses.second).getLength() &&
+            this->constSum == other.constSum;
+}
+
+bool Ellipse::isSimilarTo(const Ellipse &other) const {
+    double lengthOne = (this->focuses.first - this->focuses.second).getLength();
+    double lengthTwo = (other.focuses.first - other.focuses.second).getLength();
+    double coefficient = lengthOne / lengthTwo;
+    double newConstSum = other.constSum * coefficient;
+    return std::abs(newConstSum - this->constSum) < eps;
+}
+
+bool Ellipse::containsPoint(const Point& point) const {
+    return (this->focuses.first - point).getLength() + (this->focuses.second - point).getLength() < this->constSum;
+}
+
+void Ellipse::rotate(const Point &center, double angle) {
+    //angle в градусах!!
+    angle = (angle / 360) * 2 * 3.1415926535; //переводим в радианы
+    Point vectorOne = this->focuses.first - center;
+    Point vectorTwo = this->focuses.second - center;
+    vectorOne.rotate(angle);
+    vectorTwo.rotate(angle);
+    this->focuses.first = vectorOne + center;
+    this->focuses.second = vectorTwo + center;
+}
+
+void Ellipse::reflex(const Line &axis) {
+
 }
 
 
