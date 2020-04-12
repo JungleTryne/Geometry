@@ -59,6 +59,15 @@ Point operator+ (const Point& one, const Point& two) {
     return newPoint;
 }
 
+Point operator*(const Point& one, double coefficient) {
+    Point newPoint(one.x * coefficient, one.y*coefficient);
+    return newPoint;
+}
+
+Point operator*(double coefficient, Point& one) {
+    return one*coefficient;
+}
+
 double GetTriangleArea(const Point& one, const Point& two, const Point& three) {
     double lengthOne = (two - one).getLength();
     double lengthTwo = (three - two).getLength();
@@ -85,6 +94,8 @@ public:
 
     bool operator==(const Line& other) const;
     bool operator!=(const Line& other) const;
+
+    Point getNormalVector() const;
 };
 
 Line::Line(const Point &first, const Point &second) {
@@ -119,6 +130,32 @@ bool Line::operator!=(const Line& other) const {
     return !(*this == other);
 }
 
+Point Line::getNormalVector() const {
+    return Point(this->one.x - this->two.x, this->two.y - this->one.y);
+}
+
+Point GetReflectedPoint(const Point& point, const Line& line) {
+    Point normalVector = line.getNormalVector();
+    double normalVectorLength = normalVector.getLength();
+    normalVector.x /= normalVectorLength;
+    normalVector.y /= normalVectorLength;
+    double ortolineLength = 2*(normalVector.x*point.x + normalVector.y*point.y);
+
+    Point reflected(point.x - ortolineLength*normalVector.x, point.y - ortolineLength*normalVector.y);
+    return reflected;
+}
+
+Point GetScaledPoint(const Point& point, const Point& center, double coefficient) {
+    Point vector = point - center;
+    vector = vector*coefficient;
+    Point newPoint = vector + center;
+    return newPoint;
+}
+
+double GetDeterminant(double x11, double x12, double x21, double x22) {
+    return x11*x22 - x12*x21;
+}
+
 class Shape {
 public:
     virtual double perimeter() const = 0;
@@ -142,7 +179,7 @@ public:
     bool operator==(const Polygon& other) const;
     bool isCongruentTo(const Polygon& other) const;
     bool isSimilarTo(const Polygon& other) const;
-
+    bool containsPoint(const Point& point) const;
 };
 
 double Polygon::perimeter() const {
@@ -154,8 +191,16 @@ double Polygon::perimeter() const {
 }
 
 double Polygon::area() const {
-    return -1.0;
-    //TODO: implement
+    size_t pointer = 0;
+    double area = 0;
+    for(size_t i = 0; i < this->vertices.size(); ++i) {
+        area += GetDeterminant(this->vertices[pointer].x,
+                this->vertices[pointer].y,
+                this->vertices[(pointer + 1) % this->vertices.size()].x,
+                this->vertices[(pointer + 1) % this->vertices.size()].y
+                );
+    }
+    return std::abs(area)*0.5;
 }
 
 bool Polygon::operator==(const Polygon &other) const {
@@ -212,9 +257,13 @@ bool Polygon::isCongruentTo(const Polygon &other) const {
 
 }
 
+bool Polygon::containsPoint(const Point& point) const {
+
+}
+
 class Ellipse : public Shape {
-private:
-    std::pair<Point, Point> focuses;
+protected:
+    std::pair<Point, Point> _focuses;
     double constSum;
     std::pair<double, double> getAxis() const;
 public:
@@ -228,15 +277,22 @@ public:
 
     void rotate(const Point& center, double angle) override;
     void reflex(const Line& axis) override;
+    void scale(const Point& center, double coefficient) override;
+
+    std::pair<Point, Point> focuses() const;
+    std::pair<Line, Line> directrices() const;
+    double eccentricity() const;
+    Point center() const;
 };
 
 Ellipse::Ellipse(const std::pair<Point, Point>& focuses, double constSum) {
-    this->focuses = focuses;
+    this->_focuses = focuses;
     this->constSum = constSum;
 }
 
 std::pair<double, double> Ellipse::getAxis() const {
-    double cathet = (focuses.first - focuses.second).getLength() / 2;
+    //Функция получания полуосей эллепса
+    double cathet = (_focuses.first - _focuses.second).getLength() / 2;
     double hypotenuse = constSum/2;
     double smallAxis = sqrt(hypotenuse*hypotenuse - cathet*cathet);
     double bigAxis = constSum/2;
@@ -260,40 +316,100 @@ double Ellipse::area() const {
 }
 
 bool Ellipse::operator==(const Ellipse &other) const {
-    return this->focuses == other.focuses && this->constSum == other.constSum;
+    return this->_focuses == other._focuses && this->constSum == other.constSum;
 }
 
 bool Ellipse::isCongruent(const Ellipse &other) const {
-    return (this->focuses.first - this->focuses.second).getLength() == (other.focuses.first-other.focuses.second).getLength() &&
+    return (this->_focuses.first - this->_focuses.second).getLength() == (other._focuses.first - other._focuses.second).getLength() &&
             this->constSum == other.constSum;
 }
 
 bool Ellipse::isSimilarTo(const Ellipse &other) const {
-    double lengthOne = (this->focuses.first - this->focuses.second).getLength();
-    double lengthTwo = (other.focuses.first - other.focuses.second).getLength();
+    double lengthOne = (this->_focuses.first - this->_focuses.second).getLength();
+    double lengthTwo = (other._focuses.first - other._focuses.second).getLength();
     double coefficient = lengthOne / lengthTwo;
     double newConstSum = other.constSum * coefficient;
     return std::abs(newConstSum - this->constSum) < eps;
 }
 
 bool Ellipse::containsPoint(const Point& point) const {
-    return (this->focuses.first - point).getLength() + (this->focuses.second - point).getLength() < this->constSum;
+    return (this->_focuses.first - point).getLength() + (this->_focuses.second - point).getLength() < this->constSum;
 }
 
 void Ellipse::rotate(const Point &center, double angle) {
-    //angle в градусах!!
     angle = (angle / 360) * 2 * 3.1415926535; //переводим в радианы
-    Point vectorOne = this->focuses.first - center;
-    Point vectorTwo = this->focuses.second - center;
+    Point vectorOne = this->_focuses.first - center;
+    Point vectorTwo = this->_focuses.second - center;
     vectorOne.rotate(angle);
     vectorTwo.rotate(angle);
-    this->focuses.first = vectorOne + center;
-    this->focuses.second = vectorTwo + center;
+    this->_focuses.first = vectorOne + center;
+    this->_focuses.second = vectorTwo + center;
 }
 
 void Ellipse::reflex(const Line &axis) {
-
+    Point newFocusOne = GetReflectedPoint(this->_focuses.first, axis);
+    Point newFocusTwo = GetReflectedPoint(this->_focuses.second, axis);
+    this->_focuses = std::make_pair(newFocusOne, newFocusTwo);
 }
+
+void Ellipse::scale(const Point &center, double coefficient) {
+    Point newFocusOne = GetScaledPoint(this->_focuses.first, center, coefficient);
+    Point newFocusTwo = GetScaledPoint(this->_focuses.second, center, coefficient);
+    this->_focuses = std::make_pair(newFocusOne, newFocusTwo);
+}
+
+std::pair<Point, Point> Ellipse::focuses() const {
+    return this->_focuses;
+}
+
+std::pair<Line, Line> Ellipse::directrices() const {
+    std::pair<double, double> axis = this->getAxis();
+    double smallAxis = axis.first;
+    double bigAxis = axis.second;
+    double radiusDistance = bigAxis/this->eccentricity();
+    Point centerVector = this->center();
+
+    Point unitVector = this->_focuses.first - this->_focuses.second;
+    unitVector.x /= unitVector.getLength();
+    unitVector.y /= unitVector.getLength();
+
+    Point unitNormalVector(-unitVector.y, unitVector.x);
+
+    Point firstLineFirstPoint = unitVector * this->eccentricity() + centerVector;
+    Point firstLineSecondPoint = unitVector*this->eccentricity() + centerVector + unitNormalVector;
+    Line firstLine = Line(firstLineFirstPoint, firstLineSecondPoint);
+
+    Point secondLineFirstPoint = unitVector * (-this->eccentricity()) + centerVector;
+    Point secondLineSecondPoint = unitVector * (-this->eccentricity()) + centerVector;
+    Line secondLine = Line(secondLineFirstPoint, secondLineSecondPoint);
+
+    return std::make_pair(firstLine, secondLine);
+}
+
+double Ellipse::eccentricity() const {
+    std::pair<double, double> axis = this->getAxis();
+    double smallAxis = axis.first;
+    double bigAxis = axis.second;
+    return sqrt(1 - (smallAxis*smallAxis)/(bigAxis*bigAxis));
+}
+
+Point Ellipse::center() const {
+    return (this->_focuses.first - this->_focuses.second) * 0.5 + this->_focuses.second;
+}
+
+
+class Circle : public Ellipse {
+private:
+public:
+    double radius() const;
+    Circle(Point center, double radius);
+};
+
+double Circle::radius() const {
+    return this->constSum/2;
+}
+
+Circle::Circle(Point _center, double radius) : Ellipse(std::make_pair(_center, _center), 2*radius) {}
 
 
 int main() {
