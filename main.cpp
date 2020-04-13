@@ -174,12 +174,20 @@ class Polygon : public Shape {
 private:
     std::vector<Point> vertices;
 public:
+    //TODO: конструктор с переменным количество параметров
+    Polygon(const Polygon& other);
+    Polygon(const std::vector<Point>& points);
+
     double perimeter() const override;
     double area() const override;
     bool operator==(const Polygon& other) const;
     bool isCongruentTo(const Polygon& other) const;
     bool isSimilarTo(const Polygon& other) const;
-    bool containsPoint(const Point& point) const;
+    bool containsPoint(const Point& point) const override;
+
+    void rotate(const Point& center, double angle) override;
+    void reflex(const Line& axis) override;
+    void scale(const Point& center, double coefficient) override;
 };
 
 double Polygon::perimeter() const {
@@ -258,7 +266,45 @@ bool Polygon::isCongruentTo(const Polygon &other) const {
 }
 
 bool Polygon::containsPoint(const Point& point) const {
+    bool inside = false;
+    for(size_t i = 0, j = this->vertices.size()-1; i < this->vertices.size(); j = i++) {
+        if ((this->vertices[i].y > point.y) != (this->vertices[j].y > point.y) &&
+        (point.x <
+        (this->vertices[j].x-this->vertices[i].x) * (point.y-this->vertices[i].y) / (this->vertices[j].y-this->vertices[i].y) +this->vertices[i].x)
+        )
+        {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
 
+void Polygon::rotate(const Point &center, double angle) {
+    for(Point& vertex : this->vertices) {
+        Point vector = vertex - center;
+        vector.rotate((angle/360)*3.1415926535);
+        vertex = vector + center;
+    }
+}
+
+void Polygon::reflex(const Line &axis) {
+    for(Point& vertex : this->vertices) {
+        vertex = GetReflectedPoint(vertex, axis);
+    }
+}
+
+void Polygon::scale(const Point& center, double coefficient) {
+    for(Point& vertex : this->vertices) {
+        vertex = GetScaledPoint(vertex, center, coefficient);
+    }
+}
+
+Polygon::Polygon(const Polygon& other) {
+    this->vertices = other.vertices;
+}
+
+Polygon::Polygon(const std::vector<Point>& points) {
+    this->vertices = points;
 }
 
 class Ellipse : public Shape {
