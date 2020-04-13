@@ -4,6 +4,7 @@
 #include <vector>
 
 const double eps = 1e-6;
+const double pi = 3.1415926535;
 
 struct Point {
     double x;
@@ -66,17 +67,6 @@ Point operator*(const Point& one, double coefficient) {
 
 Point operator*(double coefficient, Point& one) {
     return one*coefficient;
-}
-
-double GetTriangleArea(const Point& one, const Point& two, const Point& three) {
-    double lengthOne = (two - one).getLength();
-    double lengthTwo = (three - two).getLength();
-    double lengthThree = (one - three).getLength();
-    double halfPerimeter = (lengthOne + lengthTwo + lengthThree) / 2;
-    return sqrt(halfPerimeter *
-            (halfPerimeter - lengthOne) *
-            (halfPerimeter - lengthTwo) *
-            (halfPerimeter - lengthThree));
 }
 
 double GetVectorsAngle(const Point& one, const Point& two) {
@@ -160,9 +150,9 @@ class Shape {
 public:
     virtual double perimeter() const = 0;
     virtual double area() const = 0;
-    virtual bool operator==(const Shape& other) const = 0;
-    virtual bool isCongruentTo(const Shape& other) const = 0;
-    virtual bool isSimilarTo(const Shape& other) const = 0;
+    //virtual bool operator==(const Shape& other) const {return false;}
+    //virtual bool isCongruentTo(const Shape& other) const {return false;}
+    //virtual bool isSimilarTo(const Shape& other) const {return false;}
     virtual bool containsPoint(const Point& point) const = 0;
 
     virtual void rotate(const Point& center, double angle) = 0;
@@ -171,7 +161,7 @@ public:
 };
 
 class Polygon : public Shape {
-private:
+protected:
     std::vector<Point> vertices;
 public:
     //TODO: конструктор с переменным количество параметров
@@ -282,7 +272,7 @@ bool Polygon::containsPoint(const Point& point) const {
 void Polygon::rotate(const Point &center, double angle) {
     for(Point& vertex : this->vertices) {
         Point vector = vertex - center;
-        vector.rotate((angle/360)*3.1415926535);
+        vector.rotate((angle/360)*pi);
         vertex = vector + center;
     }
 }
@@ -306,6 +296,32 @@ Polygon::Polygon(const Polygon& other) {
 Polygon::Polygon(const std::vector<Point>& points) {
     this->vertices = points;
 }
+
+class Rectangle : public Polygon {
+public:
+    //TODO: реализовать конструктор по двум точкам
+    explicit Rectangle(const std::vector<Point>& vertices);
+    Rectangle(const Rectangle& other);
+
+    Point center() const;
+    std::pair<Line, Line> diagonals() const;
+};
+
+Rectangle::Rectangle(const std::vector<Point> &vertices) : Polygon(vertices) {}
+
+Point Rectangle::center() const {
+    return (this->vertices[2] - this->vertices[0])*0.5 + this->vertices[0];
+}
+
+std::pair<Line, Line> Rectangle::diagonals() const {
+    return std::make_pair(
+            Line(this->vertices[0], this->vertices[2]),
+            Line(this->vertices[1], this->vertices[3])
+            );
+}
+
+Rectangle::Rectangle(const Rectangle& other) = default;
+
 
 class Ellipse : public Shape {
 protected:
@@ -349,7 +365,7 @@ double Ellipse::perimeter() const {
     std::pair<double, double> axis = this->getAxis();
     double smallAxis = axis.first;
     double bigAxis = axis.second;
-    double finalPerimeter = 2*3.1415926535*sqrt((smallAxis*smallAxis + bigAxis*bigAxis)/2);
+    double finalPerimeter = 2*pi*sqrt((smallAxis*smallAxis + bigAxis*bigAxis)/2);
     return finalPerimeter;
 }
 
@@ -357,7 +373,7 @@ double Ellipse::area() const {
     std::pair<double, double> axis = this->getAxis();
     double smallAxis = axis.first;
     double bigAxis = axis.second;
-    double finalArea = 3.1415926535*smallAxis*bigAxis;
+    double finalArea = pi*smallAxis*bigAxis;
     return finalArea;
 }
 
@@ -383,7 +399,7 @@ bool Ellipse::containsPoint(const Point& point) const {
 }
 
 void Ellipse::rotate(const Point &center, double angle) {
-    angle = (angle / 360) * 2 * 3.1415926535; //переводим в радианы
+    angle = (angle / 360) * 2 * pi; //переводим в радианы
     Point vectorOne = this->_focuses.first - center;
     Point vectorTwo = this->_focuses.second - center;
     vectorOne.rotate(angle);
@@ -448,15 +464,49 @@ class Circle : public Ellipse {
 private:
 public:
     double radius() const;
-    Circle(Point center, double radius);
+    Circle(const Point& center, double radius);
 };
 
 double Circle::radius() const {
     return this->constSum/2;
 }
 
-Circle::Circle(Point _center, double radius) : Ellipse(std::make_pair(_center, _center), 2*radius) {}
+Circle::Circle(const Point& _center, double radius) : Ellipse(std::make_pair(_center, _center), 2*radius) {}
 
+class Square : public Rectangle{
+public:
+    explicit Square(const std::pair<Point, Point>& points);
+    Circle circumscribedCircle() const;
+    Circle inscribedCircle() const;
+};
+
+Circle Square::circumscribedCircle() const {
+    return Circle(this->center(), ((this->vertices[2] - this->vertices[0]).getLength())/2);
+}
+
+Circle Square::inscribedCircle() const {
+    return Circle(this->center(), (((this->vertices[2] - this->vertices[1]).getLength())/2));
+}
+
+std::vector<Point> GetSquare(const std::pair<Point, Point>& points) {
+    Point vector = points.second - points.first;
+    vector.rotate(pi/4);
+    Point vector2 = points.second - points.first;
+    vector2.rotate(-pi/4);
+    std::vector<Point> result = {points.first, vector, points.second, vector2};
+    return result;
+}
+
+Square::Square(const std::pair<Point, Point>& points) : Rectangle(GetSquare(points)){}
+
+class Triangle : public Polygon {
+public:
+    explicit Triangle(const std::vector<Point>& points);
+};
+
+Triangle::Triangle(const std::vector<Point>& points) : Polygon(points) {
+
+}
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
