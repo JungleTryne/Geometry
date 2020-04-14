@@ -1,10 +1,19 @@
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <iostream>
 #include <vector>
 
 const double eps = 1e-6;
 const double pi = 3.1415926535;
+
+class NoLineException : public std::exception {
+    const char* what() const noexcept override;
+};
+
+const char *NoLineException::what() const noexcept {
+    return "Не существует прямой эйлера для данного треугольника";
+}
 
 struct Point {
     double x;
@@ -144,6 +153,10 @@ Point GetScaledPoint(const Point& point, const Point& center, double coefficient
 
 double GetDeterminant(double x11, double x12, double x21, double x22) {
     return x11*x22 - x12*x21;
+}
+
+double GetAngle(const Point& firstVector, const Point& secondVector) {
+    return acos(firstVector.x*secondVector.x + firstVector.y*secondVector.y)/(firstVector.getLength()* secondVector.getLength());
 }
 
 class Shape {
@@ -502,11 +515,98 @@ Square::Square(const std::pair<Point, Point>& points) : Rectangle(GetSquare(poin
 class Triangle : public Polygon {
 public:
     explicit Triangle(const std::vector<Point>& points);
+    Point orthocenter() const;
+    Point centroid() const;
+    Line EulerLine() const;
+    Circle circumscribedCircle() const;
+    Circle inscribedCircle() const;
+    Circle ninePointsCircle() const;
 };
 
-Triangle::Triangle(const std::vector<Point>& points) : Polygon(points) {
+Triangle::Triangle(const std::vector<Point>& points) : Polygon(points) {}
 
+Point Triangle::orthocenter() const {
+    //Формула взята с сайта
+    // https://math.stackexchange.com/questions/478069/how-to-calculate-the-coordinates-of-orthocentre
+    Point vectorOne = this->vertices[1] - this->vertices[0];
+    Point vectorTwo = this->vertices[2] - this->vertices[0];
+    Point vectorThree = this->vertices[2] - this->vertices[1];
+    double tanA = tan(GetAngle(vectorOne, vectorTwo));
+    double tanB = tan(GetAngle(-1*vectorOne, vectorThree));
+    double tanC = tan(GetAngle(-1*vectorTwo, -1*vectorThree));
+    double orthoX = (vertices[0].x*tanA + vertices[1].x*tanB + vertices[2].x*tanC)/(tanA + tanB + tanC);
+    double orthoY = (vertices[0].y*tanA + vertices[1].y*tanB + vertices[2].y*tanC)/(tanA + tanB + tanC);
+    return Point(orthoX, orthoY);
 }
+
+Point Triangle::centroid() const {
+    return (this->vertices[0] + this->vertices[1] + this->vertices[2])*(1/3);
+}
+
+Line Triangle::EulerLine() const {
+    Point _orthocenter = this->orthocenter();
+    Point _centroid = this->centroid();
+    if(_orthocenter == _centroid) {
+        throw NoLineException();
+    }
+    return Line(this->orthocenter(), this->centroid());
+}
+
+Circle Triangle::circumscribedCircle() const {
+    Point vectorOne = this->vertices[1] - this->vertices[0];
+    Point vectorTwo = this->vertices[2] - this->vertices[0];
+    Point vectorThree = this->vertices[2] - this->vertices[1];
+    double radius = vectorOne.getLength()*vectorTwo.getLength()*vectorThree.getLength()/(4*this->area());
+    return Circle(this->orthocenter(), radius);
+}
+
+Circle Triangle::inscribedCircle() const {
+    //Формула взята с сайта
+    // https://mathworld.wolfram.com/Incenter.html
+    Point vectorOne = this->vertices[1] - this->vertices[0];
+    Point vectorTwo = this->vertices[2] - this->vertices[0];
+    Point vectorThree = this->vertices[2] - this->vertices[1];
+
+    double oneLength = vectorOne.getLength();
+    double twoLength = vectorTwo.getLength();
+    double threeLength = vectorThree.getLength();
+
+    double halfPerimeter = 0.5*(oneLength + twoLength + threeLength);
+    double radius = this->area()/halfPerimeter;
+
+    Point center(
+            (oneLength*this->vertices[2].x + twoLength*this->vertices[0].x + threeLength*this->vertices[1].x)/
+                    (oneLength + twoLength + threeLength),
+            ((oneLength*this->vertices[2].y + twoLength*this->vertices[0].y + threeLength*this->vertices[1].y)/
+             (oneLength + twoLength + threeLength))
+             );
+
+    return Circle(center, radius);
+}
+
+Circle Triangle::ninePointsCircle() const {
+    Point vectorOne = this->vertices[1] - this->vertices[0];
+    Point vectorTwo = this->vertices[2] - this->vertices[0];
+    Point vectorThree = this->vertices[2] - this->vertices[1];
+
+    double oneLength = vectorOne.getLength();
+    double twoLength = vectorTwo.getLength();
+    double threeLength = vectorThree.getLength();
+
+    Point inscribedCircleCenter(
+            (oneLength*this->vertices[2].x + twoLength*this->vertices[0].x + threeLength*this->vertices[1].x)/
+            (oneLength + twoLength + threeLength),
+            ((oneLength*this->vertices[2].y + twoLength*this->vertices[0].y + threeLength*this->vertices[1].y)/
+             (oneLength + twoLength + threeLength))
+    );
+
+    Point _orthocenter = this->orthocenter();
+    Point center = (_orthocenter + inscribedCircleCenter)*0.5;
+    double radius = vectorOne.getLength()*vectorTwo.getLength()*vectorThree.getLength()/(4*this->area());
+    radius /= 2;
+    return Circle(center, radius);
+}
+
 
 int main() {
     std::cout << "Hello, World!" << std::endl;
