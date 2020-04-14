@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/jungletryne/development/Geometry/geometry.h
+algorithm
+-
+cmath
+-
+exception
+-
+iostream
+-
+vector
+-
+
+/home/jungletryne/development/Geometry/main.cpp
+geometry.h
+/home/jungletryne/development/Geometry/geometry.h
+
