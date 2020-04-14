@@ -131,7 +131,7 @@ bool Line::operator!=(const Line& other) const {
 }
 
 Point Line::getNormalVector() const {
-    return Point(this->one.x - this->two.x, this->two.y - this->one.y);
+    return Point(this->one.y - this->two.y, this->two.x - this->one.x);
 }
 
 Point GetReflectedPoint(const Point& point, const Line& line) {
@@ -157,7 +157,8 @@ double GetDeterminant(double x11, double x12, double x21, double x22) {
 }
 
 double GetAngle(const Point& firstVector, const Point& secondVector) {
-    return acos(firstVector.x*secondVector.x + firstVector.y*secondVector.y)/(firstVector.getLength()* secondVector.getLength());
+    double angle = acos((firstVector.x*secondVector.x + firstVector.y*secondVector.y)/(firstVector.getLength()* secondVector.getLength()));
+    return angle;
 }
 
 class Shape {
@@ -165,6 +166,7 @@ public:
     virtual double perimeter() const = 0;
     virtual double area() const = 0;
     virtual bool containsPoint(const Point& point) const = 0;
+    virtual ~Shape() = default;
 
     virtual void rotate(const Point& center, double angle) = 0;
     virtual void reflex(const Line& axis) = 0;
@@ -175,11 +177,9 @@ class Polygon : public Shape {
 protected:
     std::vector<Point> vertices;
 public:
-    //TODO: конструктор с переменным количество параметров
     Polygon(const Polygon& other);
-    Polygon(const std::vector<Point>& points);
-
-    Polygon(const Point& first);
+    explicit Polygon(const std::vector<Point>& points);
+    explicit Polygon(const Point& first);
 
     template<typename... T>
     explicit Polygon(const Point& first, const T&... other);
@@ -200,9 +200,9 @@ public:
 };
 
 double Polygon::perimeter() const {
-    double sum = 0;
-    for(size_t i = 0; i < this->vertices.size()-1; ++i) {
-        sum += (this->vertices[i+1] - this->vertices[i]).getLength();
+    double sum = 0.0;
+    for(size_t i = 0; i < this->vertices.size(); ++i) {
+        sum += (this->vertices[(i+1) % this->vertices.size()] - this->vertices[i]).getLength();
     }
     return sum;
 }
@@ -216,29 +216,40 @@ double Polygon::area() const {
                 this->vertices[(pointer + 1) % this->vertices.size()].x,
                 this->vertices[(pointer + 1) % this->vertices.size()].y
                 );
+        pointer++;
     }
     return std::abs(area)*0.5;
 }
 
 bool Polygon::operator==(const Polygon &other) const {
+    //TODO: Можно оптимизировать!
     if(this->vertices.size() != other.vertices.size()) {
         return false;
     }
-    for(size_t i = 0; i < this->vertices.size(); ++i) {
-        if(this->vertices[i] != other.vertices[i]) {
-            return false;
+    std::vector<Point> thisCopy = this->vertices;
+    for(size_t j = 0; j < thisCopy.size(); ++j) {
+        bool equal = true;
+        for(size_t i = 0; i < thisCopy.size(); ++i) {
+            if(thisCopy[i] != other.vertices[i]) {
+                equal = false;
+                break;
+            }
+        }
+        std::rotate(thisCopy.begin(), thisCopy.begin() + 1, thisCopy.end());
+        if(equal) {
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 bool Polygon::isSimilarTo(const Polygon &other) const {
     std::vector<double> anglesOne;
     std::vector<double> anglesTwo;
 
-    for(size_t i = 0; i < this->vertices.size()-1; ++i) {
-        anglesOne.push_back(GetVectorsAngle(this->vertices[i], this->vertices[i+1]));
-        anglesTwo.push_back(GetVectorsAngle(other.vertices[i], other.vertices[i+1]));
+    for(size_t i = 0; i < this->vertices.size(); ++i) {
+        anglesOne.push_back(GetVectorsAngle(this->vertices[i], this->vertices[(i+1) % this->vertices.size()]));
+        anglesTwo.push_back(GetVectorsAngle(other.vertices[i], other.vertices[(i+1) % this->vertices.size()]));
     }
 
     for(size_t i = 0; i < anglesOne.size() + 1; ++i) {
@@ -265,9 +276,9 @@ bool Polygon::isCongruentTo(const Polygon &other) const {
     std::vector<double> lengthsOne;
     std::vector<double> lengthsTwo;
 
-    for(size_t i = 0; i < this->vertices.size()-1; ++i) {
-        lengthsOne.push_back((this->vertices[i+1] - this->vertices[i]).getLength());
-        lengthsTwo.push_back((other.vertices[i+1] - other.vertices[i]).getLength());
+    for(size_t i = 0; i < this->vertices.size(); ++i) {
+        lengthsOne.push_back((this->vertices[(i+1) % this->vertices.size()] - this->vertices[i]).getLength());
+        lengthsTwo.push_back((other.vertices[(i+1) % this->vertices.size()] - other.vertices[i]).getLength());
     }
 
     for(size_t i = 0; i < lengthsOne.size() + 1; ++i) {
@@ -305,7 +316,7 @@ bool Polygon::containsPoint(const Point& point) const {
 void Polygon::rotate(const Point &center, double angle) {
     for(Point& vertex : this->vertices) {
         Point vector = vertex - center;
-        vector.rotate((angle/360)*pi);
+        vector.rotate((angle/360)*2*pi);
         vertex = vector + center;
     }
 }
@@ -351,7 +362,7 @@ bool Polygon::isConvex() const {
             positive = true;
         }
         if(zComponentProduct < 0) {
-            negative = false;
+            negative = true;
         }
     }
     return positive ^ negative;
@@ -372,7 +383,6 @@ Polygon::Polygon(const Point &first, const T &... other) : Polygon(other...) {
 
 class Rectangle : public Polygon {
 public:
-    //TODO: реализовать конструктор по двум точкам
     explicit Rectangle(const std::vector<Point>& points);
     Rectangle(const Rectangle& other);
     Rectangle(const Point& one, const Point& three, double coefficient);
@@ -465,7 +475,9 @@ double Ellipse::area() const {
 }
 
 bool Ellipse::operator==(const Ellipse &other) const {
-    return this->_focuses == other._focuses && (this->constSum - other.constSum) < eps;
+    return (this->_focuses == other._focuses ||
+            this->_focuses == std::make_pair(other._focuses.second, other._focuses.first)) &&
+    (this->constSum - other.constSum) < eps;
 }
 
 bool Ellipse::isCongruent(const Ellipse &other) const {
@@ -564,11 +576,13 @@ public:
 };
 
 Circle Square::circumscribedCircle() const {
-    return Circle(this->center(), ((this->vertices[2] - this->vertices[0]).getLength())/2);
+    Circle circle(this->center(), ((this->vertices[2] - this->vertices[0]).getLength())/2);
+    return circle;
 }
 
 Circle Square::inscribedCircle() const {
-    return Circle(this->center(), (((this->vertices[2] - this->vertices[1]).getLength())/2));
+    Circle circle(this->center(), (((this->vertices[2] - this->vertices[1]).getLength())/2));
+    return circle;
 }
 
 std::vector<Point> GetSquare(const Point& one, const Point& two) {
@@ -610,7 +624,7 @@ Point Triangle::orthocenter() const {
 }
 
 Point Triangle::centroid() const {
-    return (this->vertices[0] + this->vertices[1] + this->vertices[2])*(1/3);
+    return (this->vertices[0] + this->vertices[1] + this->vertices[2])*(0.3333333333333);
 }
 
 Line Triangle::EulerLine() const {
@@ -619,7 +633,8 @@ Line Triangle::EulerLine() const {
     if(_orthocenter == _centroid) {
         throw NoLineException();
     }
-    return Line(this->orthocenter(), this->centroid());
+    Line line(this->orthocenter(), this->centroid());
+    return line;
 }
 
 Circle Triangle::circumscribedCircle() const {
@@ -627,7 +642,8 @@ Circle Triangle::circumscribedCircle() const {
     Point vectorTwo = this->vertices[2] - this->vertices[0];
     Point vectorThree = this->vertices[2] - this->vertices[1];
     double radius = vectorOne.getLength()*vectorTwo.getLength()*vectorThree.getLength()/(4*this->area());
-    return Circle(this->orthocenter(), radius);
+    Circle circle(this->orthocenter(), radius);
+    return circle;
 }
 
 Circle Triangle::inscribedCircle() const {
@@ -651,7 +667,8 @@ Circle Triangle::inscribedCircle() const {
              (oneLength + twoLength + threeLength))
              );
 
-    return Circle(center, radius);
+    Circle circle(center, radius);
+    return circle;
 }
 
 Circle Triangle::ninePointsCircle() const {
@@ -674,5 +691,6 @@ Circle Triangle::ninePointsCircle() const {
     Point center = (_orthocenter + inscribedCircleCenter)*0.5;
     double radius = vectorOne.getLength()*vectorTwo.getLength()*vectorThree.getLength()/(4*this->area());
     radius /= 2;
-    return Circle(center, radius);
+    Circle circle(center, radius);
+    return circle;
 }

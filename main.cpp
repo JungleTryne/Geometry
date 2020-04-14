@@ -25,6 +25,10 @@ void PointTest() {
         warn("Не прошел тест getLength()");
     }
 
+    if(std::abs(Point(1, 1).getLength() - sqrt(2)) >= eps) {
+        warn("Не прошел тест getLength()");
+    }
+
     z.rotate(10);
     z.rotate(-10);
     if (!(std::abs(z.x - (-1.0)) < eps && (std::abs(z.y) < eps))) {
@@ -62,20 +66,125 @@ void PointTest() {
         warn("Не прошел тест умножения");
     }
 
+    Point f(-1, 1);
+    Point h(1,1);
+    if(GetScaledPoint(h, f, 2) != Point(3,1)) {
+        warn("Не прошел тест GetScaledPoint");
+    }
+
+    f = Point(0, 0);
+    h = Point(1,1);
+    if(GetScaledPoint(h, f, 2) != Point(2,2)) {
+        warn("Не прошел тест GetScaledPoint");
+    }
+
     std::cout << "===============" << std::endl;
 }
 
 
 void LineTest() {
     std::cout << "Тест структуры прямая" << std::endl;
+    Line one(Point(1,1), Point(2,2));
+    Line two(Point(0,0), Point(3,3));
+    Line three(Point(1,0), Point(0,0));
+    if(! ((one == two) && (one != three))) {
+        warn("Прошел тест == и !=");
+    }
 
+    Line four(Point(0,0), Point(4, 3));
+    Point normalVector = four.getNormalVector();
+    double angle = GetAngle(normalVector, Point(-3, 4));
+    if(!((std::abs(angle) < eps) || (std::abs(angle - pi) < eps))) {
+        warn("Не прошел тест getNormalVector");
+        std::cout << normalVector.x << ' ' << normalVector.y << std::endl;
+        std::cout << angle << std::endl;
+    }
+
+    Point a(2,2);
+    Point c(-2, 2);
+    Line axis(Point(0,0), Point(0,2));
+    Point b = GetReflectedPoint(a, axis);
+    Point d = GetReflectedPoint(c, axis);
+    if(b != Point(-2, 2) || d != Point(2,2)) {
+        warn("Не прошел тест GetReflectedPoint");
+        std::cout << b.x << ' ' << b.y << std::endl;
+    }
+
+    Point z(2, 0);
+    Line axis2(Point(0,0), Point(1,1));
+    Point x = GetReflectedPoint(z, axis2);
+    if(x != Point(0, 2)) {
+        warn("Не прошел тест GetReflectedPoint");
+    }
 
     std::cout << "===============" << std::endl;
 }
 
+void PolygonTest() {
+    std::cout << "Тест структуры многоугольник" << std::endl;
+
+    Polygon poly1(Point(-2,2), Point(1,2), Point(6,1) ,Point(3,-1), Point(-1,-1));
+    Polygon poly2(Point(1,2), Point(6,1) ,Point(3,-1), Point(-1,-1), Point(-2,2));
+    poly1.rotate(Point(0,0), 360);
+    std::cout << "==" << std::endl;
+    std::cout << (poly1 == poly2);
+    std::cout << (poly2 == poly1) << std::endl;
+    std::cout << "congruent" << std::endl;
+    std::cout << poly1.isCongruentTo(poly2);
+    std::cout << poly2.isCongruentTo(poly1) << std::endl;
+    std::cout << "similar" << std::endl;
+    std::cout << poly1.isSimilarTo(poly2);
+    std::cout << poly2.isSimilarTo(poly1) << std::endl;
+    std::cout << "contains point and convex" << std::endl;
+
+    std::cout << poly1.containsPoint(Point(0,0));
+    std::cout << poly1.isConvex();
+    std::cout << std::endl;
+
+    Polygon poly3(Point(0,0), Point(1,1), Point(2, 0));
+    Triangle poly4(Point(0,0), Point(2,0), Point(1, -1));
+    std::cout << (poly3 == poly4);
+    std::cout << (poly4 == poly3);
+    std::cout << poly3.isCongruentTo(poly4);
+    std::cout << poly4.isCongruentTo(poly3);
+    std::cout << poly3.isSimilarTo(poly4);
+    std::cout << poly4.isSimilarTo(poly3);
+    std::cout << std::endl;
+
+    Triangle poly5(Point(0,0), Point(0.5,0.5), Point(1,0));
+    std::cout << (poly3 == poly5);
+    std::cout << (poly5 == poly3);
+    std::cout << poly3.isCongruentTo(poly5);
+    std::cout << poly5.isCongruentTo(poly3);
+    std::cout << poly3.isSimilarTo(poly5);
+    std::cout << poly5.isSimilarTo(poly3);
+    std::cout << std::endl;
+
+    std::cout << "===============" << std::endl;
+}
+
+void EllipseTest() {
+    std::cout << "Тест структуры эллипс" << std::endl;
+    Ellipse elps1(Point(1,0), Point(-1,0), 2);
+    Ellipse elps2(Point(-1, 0), Point(1, 0), 2);
+    std::cout << (elps1 == elps2) << std::endl;
+    std::cout << "===============" << std::endl;
+}
+
+void DifferentShapesTest() {
+    std::cout << "Тест взаимодействия разных структур" << std::endl;
+    Shape*  elps1 = new Ellipse(Point(1,0), Point(-1,0), 2);
+    Shape* sqr = new Square(Point(0, 0), Point(1,1));
+
+    std::cout << (elps1 == sqr) << std::endl;
+    std::cout << "===============" << std::endl;
+}
 
 int main() {
     PointTest();
-    Polygon poly(Point(0,0), Point(1,1), Point(1,0), Point(1,1));
+    LineTest();
+    PolygonTest();
+    EllipseTest();
+    DifferentShapesTest();
     return 0;
 }
