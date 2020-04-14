@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <initializer_list>
 #include <iostream>
 #include <vector>
 
@@ -178,6 +179,11 @@ public:
     Polygon(const Polygon& other);
     Polygon(const std::vector<Point>& points);
 
+    Polygon(const Point& first);
+
+    template<typename... T>
+    explicit Polygon(const Point& first, const T&... other);
+
     double perimeter() const override;
     double area() const override;
     bool operator==(const Polygon& other) const;
@@ -186,6 +192,7 @@ public:
     bool isSimilarTo(const Polygon& other) const;
     bool containsPoint(const Point& point) const override;
     bool isConvex() const;
+    std::vector<Point> getVertices() const;
 
     void rotate(const Point& center, double angle) override;
     void reflex(const Line& axis) override;
@@ -235,7 +242,14 @@ bool Polygon::isSimilarTo(const Polygon &other) const {
     }
 
     for(size_t i = 0; i < anglesOne.size() + 1; ++i) {
-        if(anglesOne == anglesTwo) {
+        bool equal = true;
+        for(size_t j = 0; j < anglesOne.size(); ++j) {
+            if(std::abs(anglesOne[j] - anglesTwo[j]) >= eps) {
+                equal = false;
+                break;
+            }
+        }
+        if(equal) {
             return true;
         }
         std::rotate(anglesTwo.begin(), anglesTwo.begin() + 1, anglesTwo.end());
@@ -257,7 +271,14 @@ bool Polygon::isCongruentTo(const Polygon &other) const {
     }
 
     for(size_t i = 0; i < lengthsOne.size() + 1; ++i) {
-        if(lengthsOne == lengthsTwo) {
+        bool equal = true;
+        for(size_t j = 0; j < lengthsOne.size(); ++j) {
+            if(std::abs(lengthsOne[j] - lengthsTwo[j]) >= eps) {
+                equal = false;
+                break;
+            }
+        }
+        if(equal) {
             return true;
         }
         std::rotate(lengthsTwo.begin(), lengthsTwo.begin() + 1, lengthsTwo.end());
@@ -336,17 +357,29 @@ bool Polygon::isConvex() const {
     return positive ^ negative;
 }
 
+std::vector<Point> Polygon::getVertices() const {
+    return this->vertices;
+}
+
+Polygon::Polygon(const Point& first) {
+    this->vertices.insert(this->vertices.begin(), first);
+}
+
+template<typename... T>
+Polygon::Polygon(const Point &first, const T &... other) : Polygon(other...) {
+    this->vertices.insert(this->vertices.begin(), first);
+}
+
 class Rectangle : public Polygon {
 public:
     //TODO: реализовать конструктор по двум точкам
-    explicit Rectangle(const std::vector<Point>& vertices);
+    explicit Rectangle(const std::vector<Point>& points);
     Rectangle(const Rectangle& other);
+    Rectangle(const Point& one, const Point& three, double coefficient);
 
     Point center() const;
     std::pair<Line, Line> diagonals() const;
 };
-
-Rectangle::Rectangle(const std::vector<Point> &vertices) : Polygon(vertices) {}
 
 Point Rectangle::center() const {
     return (this->vertices[2] - this->vertices[0])*0.5 + this->vertices[0];
@@ -358,6 +391,21 @@ std::pair<Line, Line> Rectangle::diagonals() const {
             Line(this->vertices[1], this->vertices[3])
             );
 }
+
+std::vector<Point> getRectangleFromTwoPoints(const Point& one, const Point& three, double coefficient) {
+    Point vector = three - one;
+    double angle = atan(coefficient);
+    Point side = vector;
+    side.rotate(angle);
+    side = side * (1/side.getLength()) * sqrt(std::pow(vector.getLength(),2)/(1+coefficient*coefficient));
+    Point two = one + side;
+    Point four = two - side;
+    return std::vector<Point>{one, two, three, four};
+}
+
+Rectangle::Rectangle(const Point& one, const Point& three, double coefficient) : Polygon(getRectangleFromTwoPoints(one, three, coefficient)){}
+
+Rectangle::Rectangle(const std::vector<Point> &points) : Polygon(points) {}
 
 Rectangle::Rectangle(const Rectangle& other) = default;
 
@@ -417,12 +465,12 @@ double Ellipse::area() const {
 }
 
 bool Ellipse::operator==(const Ellipse &other) const {
-    return this->_focuses == other._focuses && this->constSum == other.constSum;
+    return this->_focuses == other._focuses && (this->constSum - other.constSum) < eps;
 }
 
 bool Ellipse::isCongruent(const Ellipse &other) const {
-    return (this->_focuses.first - this->_focuses.second).getLength() == (other._focuses.first - other._focuses.second).getLength() &&
-            this->constSum == other.constSum;
+    return std::abs((this->_focuses.first - this->_focuses.second).getLength() - (other._focuses.first - other._focuses.second).getLength()) < eps &&
+            std::abs(this->constSum - other.constSum) < eps;
 }
 
 bool Ellipse::isSimilarTo(const Ellipse &other) const {

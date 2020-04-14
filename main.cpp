@@ -58,6 +58,10 @@ void PointTest() {
         warn("Не прошел тест на угол");
     }
 
+    if(a*0.5*2 != a) {
+        warn("Не прошел тест умножения");
+    }
+
     std::cout << "===============" << std::endl;
 }
 
@@ -72,5 +76,6 @@ void LineTest() {
 
 int main() {
     PointTest();
+    Polygon poly(Point(0,0), Point(1,1), Point(1,0), Point(1,1));
     return 0;
 }
