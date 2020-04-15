@@ -620,7 +620,7 @@ Point Triangle::orthocenter() const {
     double tanC = tan(GetAngle(-1*vectorTwo, -1*vectorThree));
     double orthoX = (vertices[0].x*tanA + vertices[1].x*tanB + vertices[2].x*tanC)/(tanA + tanB + tanC);
     double orthoY = (vertices[0].y*tanA + vertices[1].y*tanB + vertices[2].y*tanC)/(tanA + tanB + tanC);
-    return Point(orthoX, orthoY);
+    return Point(orthoX+this->vertices[0].x, orthoY+this->vertices[0].y);
 }
 
 Point Triangle::centroid() const {
@@ -647,6 +647,7 @@ Circle Triangle::circumscribedCircle() const {
 }
 
 Circle Triangle::inscribedCircle() const {
+
     //Формула взята с сайта
     // https://mathworld.wolfram.com/Incenter.html
     Point vectorOne = this->vertices[1] - this->vertices[0];
@@ -667,7 +668,7 @@ Circle Triangle::inscribedCircle() const {
              (oneLength + twoLength + threeLength))
              );
 
-    Circle circle(center, radius);
+    Circle circle(center+this->vertices[0], radius);
     return circle;
 }
 
@@ -688,7 +689,7 @@ Circle Triangle::ninePointsCircle() const {
     );
 
     Point _orthocenter = this->orthocenter();
-    Point center = (_orthocenter + inscribedCircleCenter)*0.5;
+    Point center = (_orthocenter-this->vertices[0] + inscribedCircleCenter)*0.5 + this->vertices[0];
     double radius = vectorOne.getLength()*vectorTwo.getLength()*vectorThree.getLength()/(4*this->area());
     radius /= 2;
     Circle circle(center, radius);

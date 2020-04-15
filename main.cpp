@@ -175,8 +175,9 @@ void DifferentShapesTest() {
     std::cout << "Тест взаимодействия разных структур" << std::endl;
     Shape*  elps1 = new Ellipse(Point(1,0), Point(-1,0), 2);
     Shape* sqr = new Square(Point(0, 0), Point(1,1));
-
+    Shape* sqr2 = new Square(Point(0, 0), Point(1,1));
     std::cout << (elps1 == sqr) << std::endl;
+    std::cout << (sqr == sqr2) << std::endl;
     std::cout << "===============" << std::endl;
 }
 
