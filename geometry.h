@@ -27,6 +27,7 @@ struct Point {
     bool operator!=(const Point& other) const;
 
     double getLength() const;
+    double getScalar(const Point& other) const;
     void rotate(double angle);
 };
 
@@ -58,6 +59,10 @@ void Point::rotate(double angle) {
     double newY = this->x*sin(angle) + this->y*cos(angle);
     this->x = newX;
     this->y = newY;
+}
+
+double Point::getScalar(const Point& other) const {
+    return this->x*other.x + this->y*other.y;
 }
 
 Point operator-(const Point& one, const Point& two) {
@@ -186,10 +191,10 @@ public:
 
     double perimeter() const override;
     double area() const override;
-    bool operator==(const Polygon& other) const;
-    bool operator!=(const Polygon& other) const;
-    bool isCongruentTo(const Polygon& other) const;
-    bool isSimilarTo(const Polygon& other) const;
+    virtual bool operator==(const Polygon& other) const;
+    virtual bool operator!=(const Polygon& other) const;
+    virtual bool isCongruentTo(const Polygon& other) const;
+    virtual bool isSimilarTo(const Polygon& other) const;
     bool containsPoint(const Point& point) const override;
     bool isConvex() const;
     std::vector<Point> getVertices() const;
@@ -222,12 +227,25 @@ double Polygon::area() const {
 }
 
 bool Polygon::operator==(const Polygon &other) const {
-    //TODO: Можно оптимизировать!
     if(this->vertices.size() != other.vertices.size()) {
         return false;
     }
     std::vector<Point> thisCopy = this->vertices;
-    for(size_t j = 0; j < thisCopy.size(); ++j) {
+    for(size_t j = 0; j < thisCopy.size()+1; ++j) {
+        bool equal = true;
+        for(size_t i = 0; i < thisCopy.size(); ++i) {
+            if(thisCopy[i] != other.vertices[i]) {
+                equal = false;
+                break;
+            }
+        }
+        std::rotate(thisCopy.begin(), thisCopy.begin() + 1, thisCopy.end());
+        if(equal) {
+            return true;
+        }
+    }
+    std::reverse(thisCopy.begin(), thisCopy.end());
+    for(size_t j = 0; j < thisCopy.size()+1; ++j) {
         bool equal = true;
         for(size_t i = 0; i < thisCopy.size(); ++i) {
             if(thisCopy[i] != other.vertices[i]) {
@@ -243,48 +261,66 @@ bool Polygon::operator==(const Polygon &other) const {
     return false;
 }
 
+
 bool Polygon::isSimilarTo(const Polygon &other) const {
-    std::vector<double> anglesOne;
-    std::vector<double> anglesTwo;
+    if(this->vertices.size() != other.vertices.size()) {
+        return false;
+    }
+
+    std::vector<Point> edgesThis;
+    std::vector<Point> edgesOther;
 
     for(size_t i = 0; i < this->vertices.size(); ++i) {
-        anglesOne.push_back(GetVectorsAngle(this->vertices[i], this->vertices[(i+1) % this->vertices.size()]));
-        anglesTwo.push_back(GetVectorsAngle(other.vertices[i], other.vertices[(i+1) % this->vertices.size()]));
+        Point firstEdge = this->vertices[i]-this->vertices[(i+1) % this->vertices.size()];
+        Point firstEdgeOther = other.vertices[i]-other.vertices[(i+1) % other.vertices.size()];
+        edgesThis.push_back(firstEdge);
+        edgesOther.push_back(firstEdgeOther);
     }
 
-    for(size_t i = 0; i < anglesOne.size() + 1; ++i) {
-        bool equal = true;
-        for(size_t j = 0; j < anglesOne.size(); ++j) {
-            if(std::abs(anglesOne[j] - anglesTwo[j]) >= eps) {
-                equal = false;
-                break;
-            }
+    for(size_t i = 0; i < this->vertices.size(); ++i) {
+        double koef = edgesThis[i].getLength() / edgesOther[0].getLength();
+
+        std::vector<Point> otherCopy = edgesOther;
+        for(size_t j = 0; j < edgesOther.size(); ++j) {
+            otherCopy[j] = GetScaledPoint(otherCopy[j], Point(0,0), koef);
         }
-        if(equal) {
+        std::vector<Point> scaledPolygonVector{Point(0, 0)};
+        for(size_t j = 0; j < edgesOther.size()-1; ++j) {
+            Point nextPoint = scaledPolygonVector.back() + otherCopy[j];
+            scaledPolygonVector.push_back(nextPoint);
+        }
+        Polygon scaledPolygon(scaledPolygonVector);
+        if(this->isCongruentTo(scaledPolygon)) {
             return true;
         }
-        std::rotate(anglesTwo.begin(), anglesTwo.begin() + 1, anglesTwo.end());
     }
-
     return false;
 }
 
 bool Polygon::isCongruentTo(const Polygon &other) const {
-    if(!this->isSimilarTo(other)) {
+    if(this->vertices.size() != other.vertices.size()) {
         return false;
     }
-    std::vector<double> lengthsOne;
-    std::vector<double> lengthsTwo;
+    std::vector<double> scalarThis;
+    std::vector<double> scalarOther;
+    std::vector<double> edgesThis;
+    std::vector<double> edgesOther;
 
     for(size_t i = 0; i < this->vertices.size(); ++i) {
-        lengthsOne.push_back((this->vertices[(i+1) % this->vertices.size()] - this->vertices[i]).getLength());
-        lengthsTwo.push_back((other.vertices[(i+1) % this->vertices.size()] - other.vertices[i]).getLength());
+        Point firstEdge = this->vertices[i]-this->vertices[(i+1) % this->vertices.size()];
+        Point secondEdge = this->vertices[(i+1) % this->vertices.size()] - this->vertices[(i+2) % this->vertices.size()];
+        Point firstEdgeOther = other.vertices[i]-other.vertices[(i+1) % other.vertices.size()];
+        Point secondEdgeOther = other.vertices[(i+1) % other.vertices.size()] - other.vertices[(i+2) % other.vertices.size()];
+        scalarThis.push_back((firstEdge).getScalar(secondEdge));
+        scalarOther.push_back((firstEdgeOther).getScalar(secondEdgeOther));
+        edgesThis.push_back(firstEdge.getLength());
+        edgesOther.push_back(firstEdgeOther.getLength());
     }
 
-    for(size_t i = 0; i < lengthsOne.size() + 1; ++i) {
+    for(size_t i = 0; i < scalarOther.size(); ++i) {
         bool equal = true;
-        for(size_t j = 0; j < lengthsOne.size(); ++j) {
-            if(std::abs(lengthsOne[j] - lengthsTwo[j]) >= eps) {
+        for(size_t j = 0; j < scalarOther.size(); ++j) {
+            if (! ((std::abs(scalarThis[j] - scalarOther[j]) < eps) && (std::abs(edgesThis[j]-edgesOther[j]) < eps))) {
                 equal = false;
                 break;
             }
@@ -292,7 +328,27 @@ bool Polygon::isCongruentTo(const Polygon &other) const {
         if(equal) {
             return true;
         }
-        std::rotate(lengthsTwo.begin(), lengthsTwo.begin() + 1, lengthsTwo.end());
+        std::rotate(scalarOther.begin(), scalarOther.begin() + 1, scalarOther.end());
+        std::rotate(edgesOther.begin(), edgesOther.begin() + 1, edgesOther.end());
+    }
+
+    std::reverse(edgesOther.begin(), edgesOther.end());
+    std::reverse(scalarOther.begin(), scalarOther.end());
+    std::rotate(scalarOther.begin(), scalarOther.begin()+1, scalarOther.end());
+
+    for(size_t i = 0; i < scalarOther.size(); ++i) {
+        bool equal = true;
+        for(size_t j = 0; j < scalarOther.size(); ++j) {
+            if (! ((std::abs(scalarThis[j] - scalarOther[j]) < eps) && (std::abs(edgesThis[j]-edgesOther[j]) < eps))) {
+                equal = false;
+                break;
+            }
+        }
+        if(equal) {
+            return true;
+        }
+        std::rotate(scalarOther.begin(), scalarOther.begin() + 1, scalarOther.end());
+        std::rotate(edgesOther.begin(), edgesOther.begin() + 1, edgesOther.end());
     }
 
     return false;
@@ -429,9 +485,9 @@ public:
     Ellipse(const Point& one, const Point& two, double constSum);
     double perimeter() const override;
     double area() const override;
-    bool operator==(const Ellipse& other) const;
-    bool isCongruent(const Ellipse& other) const;
-    bool isSimilarTo(const Ellipse& other) const;
+    virtual bool operator==(const Ellipse& other) const;
+    virtual bool isCongruent(const Ellipse& other) const;
+    virtual bool isSimilarTo(const Ellipse& other) const;
     bool containsPoint(const Point& point) const override;
 
     void rotate(const Point& center, double angle) override;
