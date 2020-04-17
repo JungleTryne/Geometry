@@ -5,8 +5,8 @@
 #include <iostream>
 #include <vector>
 
-const double eps = 1e-6;
-const double pi = 3.1415926535;
+const double eps = 1e-9;
+const double pi = 3.14159265358979323;
 
 class NoLineException : public std::exception {
     const char* what() const noexcept override;
@@ -171,6 +171,12 @@ public:
     virtual double perimeter() const = 0;
     virtual double area() const = 0;
     virtual bool containsPoint(const Point& point) const = 0;
+
+    virtual bool operator==(const Shape& other) const = 0;
+    virtual bool operator!=(const Shape& other) const = 0;
+    virtual bool isCongruentTo(const Shape& other) const = 0;
+    virtual bool isSimilarTo(const Shape& other) const = 0;
+
     virtual ~Shape() = default;
 
     virtual void rotate(const Point& center, double angle) = 0;
@@ -191,10 +197,10 @@ public:
 
     double perimeter() const override;
     double area() const override;
-    virtual bool operator==(const Polygon& other) const;
-    virtual bool operator!=(const Polygon& other) const;
-    virtual bool isCongruentTo(const Polygon& other) const;
-    virtual bool isSimilarTo(const Polygon& other) const;
+    bool operator==(const Shape& other) const override;
+    bool operator!=(const Shape& other) const override;
+    bool isCongruentTo(const Shape& other) const override;
+    bool isSimilarTo(const Shape& other) const override;
     bool containsPoint(const Point& point) const override;
     bool isConvex() const;
     std::vector<Point> getVertices() const;
@@ -226,10 +232,17 @@ double Polygon::area() const {
     return std::abs(area)*0.5;
 }
 
-bool Polygon::operator==(const Polygon &other) const {
+bool Polygon::operator==(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Polygon*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Polygon other = *otherPointer;
+
     if(this->vertices.size() != other.vertices.size()) {
         return false;
     }
+
     std::vector<Point> thisCopy = this->vertices;
     for(size_t j = 0; j < thisCopy.size()+1; ++j) {
         bool equal = true;
@@ -244,6 +257,7 @@ bool Polygon::operator==(const Polygon &other) const {
             return true;
         }
     }
+
     std::reverse(thisCopy.begin(), thisCopy.end());
     for(size_t j = 0; j < thisCopy.size()+1; ++j) {
         bool equal = true;
@@ -262,7 +276,13 @@ bool Polygon::operator==(const Polygon &other) const {
 }
 
 
-bool Polygon::isSimilarTo(const Polygon &other) const {
+bool Polygon::isSimilarTo(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Polygon*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Polygon other = *otherPointer;
+
     if(this->vertices.size() != other.vertices.size()) {
         return false;
     }
@@ -297,7 +317,13 @@ bool Polygon::isSimilarTo(const Polygon &other) const {
     return false;
 }
 
-bool Polygon::isCongruentTo(const Polygon &other) const {
+bool Polygon::isCongruentTo(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Polygon*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Polygon other = *otherPointer;
+
     if(this->vertices.size() != other.vertices.size()) {
         return false;
     }
@@ -397,7 +423,12 @@ Polygon::Polygon(const std::vector<Point>& points) {
     this->vertices = points;
 }
 
-bool Polygon::operator!=(const Polygon& other) const {
+bool Polygon::operator!=(const Shape& otherShape) const {
+    const auto otherPointer = dynamic_cast<const Polygon*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Polygon other = *otherPointer;
     return !(*this == other);
 }
 
@@ -437,44 +468,6 @@ Polygon::Polygon(const Point &first, const T &... other) : Polygon(other...) {
     this->vertices.insert(this->vertices.begin(), first);
 }
 
-class Rectangle : public Polygon {
-public:
-    explicit Rectangle(const std::vector<Point>& points);
-    Rectangle(const Rectangle& other);
-    Rectangle(const Point& one, const Point& three, double coefficient);
-
-    Point center() const;
-    std::pair<Line, Line> diagonals() const;
-};
-
-Point Rectangle::center() const {
-    return (this->vertices[2] - this->vertices[0])*0.5 + this->vertices[0];
-}
-
-std::pair<Line, Line> Rectangle::diagonals() const {
-    return std::make_pair(
-            Line(this->vertices[0], this->vertices[2]),
-            Line(this->vertices[1], this->vertices[3])
-            );
-}
-
-std::vector<Point> getRectangleFromTwoPoints(const Point& one, const Point& three, double coefficient) {
-    Point vector = three - one;
-    double angle = atan(coefficient);
-    Point side = vector;
-    side.rotate(angle);
-    side = side * (1/side.getLength()) * sqrt(std::pow(vector.getLength(),2)/(1+coefficient*coefficient));
-    Point two = one + side;
-    Point four = two - side;
-    return std::vector<Point>{one, two, three, four};
-}
-
-Rectangle::Rectangle(const Point& one, const Point& three, double coefficient) : Polygon(getRectangleFromTwoPoints(one, three, coefficient)){}
-
-Rectangle::Rectangle(const std::vector<Point> &points) : Polygon(points) {}
-
-Rectangle::Rectangle(const Rectangle& other) = default;
-
 
 class Ellipse : public Shape {
 protected:
@@ -485,9 +478,10 @@ public:
     Ellipse(const Point& one, const Point& two, double constSum);
     double perimeter() const override;
     double area() const override;
-    virtual bool operator==(const Ellipse& other) const;
-    virtual bool isCongruent(const Ellipse& other) const;
-    virtual bool isSimilarTo(const Ellipse& other) const;
+    bool operator==(const Shape& other) const override;
+    bool operator!=(const Shape& other) const override;
+    bool isCongruentTo(const Shape& other) const override;
+    bool isSimilarTo(const Shape& other) const override;
     bool containsPoint(const Point& point) const override;
 
     void rotate(const Point& center, double angle) override;
@@ -506,11 +500,11 @@ Ellipse::Ellipse(const Point& one, const Point& two, double constSum) {
 }
 
 std::pair<double, double> Ellipse::getAxis() const {
-    //Функция получания полуосей эллепса
+    //Функция получения полуосей эллипса
     double cathet = (_focuses.first - _focuses.second).getLength() / 2;
     double hypotenuse = constSum/2;
     double smallAxis = sqrt(hypotenuse*hypotenuse - cathet*cathet);
-    double bigAxis = constSum/2;
+    double bigAxis = sqrt(smallAxis*smallAxis + cathet*cathet);
     return std::make_pair(smallAxis, bigAxis);
 }
 
@@ -530,27 +524,43 @@ double Ellipse::area() const {
     return finalArea;
 }
 
-bool Ellipse::operator==(const Ellipse &other) const {
-    return (this->_focuses == other._focuses ||
+bool Ellipse::operator==(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Ellipse*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Ellipse other = *otherPointer;
+    return ((this->_focuses == other._focuses ||
             this->_focuses == std::make_pair(other._focuses.second, other._focuses.first)) &&
-    (this->constSum - other.constSum) < eps;
+    std::abs(this->constSum - other.constSum) < eps);
 }
 
-bool Ellipse::isCongruent(const Ellipse &other) const {
+bool Ellipse::isCongruentTo(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Ellipse*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Ellipse other = *otherPointer;
     return std::abs((this->_focuses.first - this->_focuses.second).getLength() - (other._focuses.first - other._focuses.second).getLength()) < eps &&
             std::abs(this->constSum - other.constSum) < eps;
 }
 
-bool Ellipse::isSimilarTo(const Ellipse &other) const {
+bool Ellipse::isSimilarTo(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Ellipse*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Ellipse other = *otherPointer;
     double lengthOne = (this->_focuses.first - this->_focuses.second).getLength();
     double lengthTwo = (other._focuses.first - other._focuses.second).getLength();
-    double coefficient = lengthOne / lengthTwo;
-    double newConstSum = other.constSum * coefficient;
-    return std::abs(newConstSum - this->constSum) < eps;
+    if(std::abs(lengthOne - lengthTwo) < eps && std::abs(lengthTwo) < eps) {
+        return true;
+    }
+    return std::abs(this->eccentricity() - other.eccentricity()) < eps;
 }
 
 bool Ellipse::containsPoint(const Point& point) const {
-    return (this->_focuses.first - point).getLength() + (this->_focuses.second - point).getLength() < this->constSum;
+    return (this->_focuses.first - point).getLength() + (this->_focuses.second - point).getLength() <= this->constSum;
 }
 
 void Ellipse::rotate(const Point &center, double angle) {
@@ -573,6 +583,7 @@ void Ellipse::scale(const Point &center, double coefficient) {
     Point newFocusOne = GetScaledPoint(this->_focuses.first, center, coefficient);
     Point newFocusTwo = GetScaledPoint(this->_focuses.second, center, coefficient);
     this->_focuses = std::make_pair(newFocusOne, newFocusTwo);
+    this->constSum = (this->constSum)*coefficient;
 }
 
 std::pair<Point, Point> Ellipse::focuses() const {
@@ -610,6 +621,15 @@ Point Ellipse::center() const {
     return (this->_focuses.first - this->_focuses.second) * 0.5 + this->_focuses.second;
 }
 
+bool Ellipse::operator!=(const Shape &otherShape) const {
+    const auto otherPointer = dynamic_cast<const Ellipse*>(&otherShape);
+    if(!otherPointer) {
+        return false;
+    }
+    Ellipse other = *otherPointer;
+    return !(other == *this);
+}
+
 
 class Circle : public Ellipse {
 private:
@@ -623,6 +643,50 @@ double Circle::radius() const {
 }
 
 Circle::Circle(const Point& _center, double radius) : Ellipse(_center, _center, 2*radius) {}
+
+class Rectangle : public Polygon {
+public:
+    explicit Rectangle(const std::vector<Point>& points);
+    Rectangle(const Rectangle& other);
+    Rectangle(const Point& one, const Point& three, double coefficient);
+
+    Point center() const;
+    std::pair<Line, Line> diagonals() const;
+};
+
+Point Rectangle::center() const {
+    return (this->vertices[2] - this->vertices[0])*0.5 + this->vertices[0];
+}
+
+std::pair<Line, Line> Rectangle::diagonals() const {
+    return std::make_pair(
+            Line(this->vertices[0], this->vertices[2]),
+            Line(this->vertices[1], this->vertices[3])
+    );
+}
+
+std::vector<Point> getRectangleFromTwoPoints(const Point& one, const Point& three, double coefficient) {
+    Point vector = three - one;
+    double angle = std::max(atan(coefficient), pi/2 - atan(coefficient));
+    Point side1 = vector;
+    side1.rotate(angle);
+    side1 = side1 * (1/side1.getLength()) * vector.getLength()*cos(angle);
+
+    Point side2 = vector;
+    side2.rotate(angle-pi/2);
+    side2 = side2 * (1/side2.getLength()) * vector.getLength()*sin(angle);
+
+    Point two = one + side1;
+    Point four = one + side2;
+    return std::vector<Point>{one, two, three, four};
+}
+
+Rectangle::Rectangle(const Point& one, const Point& three, double coefficient) : Polygon(getRectangleFromTwoPoints(one, three, coefficient)){}
+
+Rectangle::Rectangle(const std::vector<Point> &points) : Polygon(points) {}
+
+Rectangle::Rectangle(const Rectangle& other) = default;
+
 
 class Square : public Rectangle{
 public:
@@ -644,7 +708,9 @@ Circle Square::inscribedCircle() const {
 std::vector<Point> GetSquare(const Point& one, const Point& two) {
     Point vector = two - one;
     vector.rotate(pi/4);
+    vector = vector * (1/sqrt(2));
     Point vector2 = two - one;
+    vector2 = vector2 * (1/sqrt(2));
     vector2.rotate(-pi/4);
     std::vector<Point> result = {one, vector, two, vector2};
     return result;
@@ -667,16 +733,19 @@ Triangle::Triangle(const Point& one, const Point& two, const Point& three) : Pol
 
 Point Triangle::orthocenter() const {
     //Формула взята с сайта
-    // https://math.stackexchange.com/questions/478069/how-to-calculate-the-coordinates-of-orthocentre
-    Point vectorOne = this->vertices[1] - this->vertices[0];
-    Point vectorTwo = this->vertices[2] - this->vertices[0];
-    Point vectorThree = this->vertices[2] - this->vertices[1];
-    double tanA = tan(GetAngle(vectorOne, vectorTwo));
-    double tanB = tan(GetAngle(-1*vectorOne, vectorThree));
-    double tanC = tan(GetAngle(-1*vectorTwo, -1*vectorThree));
-    double orthoX = (vertices[0].x*tanA + vertices[1].x*tanB + vertices[2].x*tanC)/(tanA + tanB + tanC);
-    double orthoY = (vertices[0].y*tanA + vertices[1].y*tanB + vertices[2].y*tanC)/(tanA + tanB + tanC);
-    return Point(orthoX+this->vertices[0].x, orthoY+this->vertices[0].y);
+    // https://www.quora.com/What-is-the-orthocentre-of-a-triangle-when-the-vertices-are-x1-y1-x2-y2-x3-y3
+    double x1 = this->vertices[0].x;
+    double x2 = this->vertices[1].x;
+    double x3 = this->vertices[2].x;
+
+    double y1 = this->vertices[0].y;
+    double y2 = this->vertices[1].y;
+    double y3 = this->vertices[2].y;
+
+    double orthoX = ((x2*(x1-x3) + y2*(y1-y3))*(y3-y2) - (y3-y1)*(x1*(x2-x3) + y1*(y2-y3)))/((x3-x2)*(y3-y1) - (y3-y2)*(x3-x1));
+    double orthoY = ((x2*(x1-x3) + y2*(y1-y3))*(x3-x2) - (x3-x1)*(x1*(x2-x3) + y1*(y2-y3)))/((y3-y2)*(x3-x1) - (x3-x2)*(y3-y1));
+    return Point(orthoX, orthoY);
+
 }
 
 Point Triangle::centroid() const {
@@ -698,7 +767,20 @@ Circle Triangle::circumscribedCircle() const {
     Point vectorTwo = this->vertices[2] - this->vertices[0];
     Point vectorThree = this->vertices[2] - this->vertices[1];
     double radius = vectorOne.getLength()*vectorTwo.getLength()*vectorThree.getLength()/(4*this->area());
-    Circle circle(this->orthocenter(), radius);
+
+    double x1 = this->vertices[0].x;
+    double x2 = this->vertices[1].x;
+    double x3 = this->vertices[2].x;
+
+    double y1 = this->vertices[0].y;
+    double y2 = this->vertices[1].y;
+    double y3 = this->vertices[2].y;
+
+    double D = 2*(x1*(y2-y3)+x2*(y3-y1)+x3*(y1-y2));
+    double centerX = (1/D)*((x1*x1+y1*y1)*(y2-y3) + (x2*x2+y2*y2)*(y3-y1) + (x3*x3+y3*y3)*(y1-y2));
+    double centerY = (1/D)*((x1*x1+y1*y1)*(x3-x2) + (x2*x2+y2*y2)*(x1-x3) + (x3*x3+y3*y3)*(x2-x1));
+
+    Circle circle(Point(centerX, centerY), radius);
     return circle;
 }
 

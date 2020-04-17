@@ -9,4 +9,4 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall")
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(GeometricShapes main.cpp)
+add_executable(GeometricShapes "main.cpp")

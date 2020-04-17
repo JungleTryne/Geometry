@@ -20,7 +20,7 @@ void PointTest() {
     }
 
     if (!(std::abs(x.getLength() - 5.0) < eps &&
-          std::abs(t.getLength() - 5.0) < eps))
+        std::abs(t.getLength() - 5.0) < eps))
     {
         warn("Не прошел тест getLength()");
     }
@@ -253,19 +253,6 @@ void RectangleTest() {
 
 }
 
-void TriangleTest() {
-    Triangle t(Point(0,0), Point(1,0), Point(0,1));
-    std::cout << t.orthocenter().x << ' ' << t.orthocenter().y << std::endl;
-    std::cout << t.circumscribedCircle().focuses().first.x << t.circumscribedCircle().focuses().first.y << std::endl;
-
-    Square s(Point(0,0), Point(1,1));
-    Circle c = s.circumscribedCircle();
-    Circle c1 = s.inscribedCircle();
-    std::cout << c.focuses().first.x << ' ' << c.focuses().first.y << std::endl;
-    std::cout<< (c == Circle(Point(0.5, 0.5), sqrt(2)/2)) << std::endl;
-    std::cout << (c1 == Ellipse(Point(0.5, 0.5), Point(0.5, 0.5), 1)) << std::endl;
-}
-
 int main() {
     //PointTest();
     //LineTest();
@@ -273,7 +260,6 @@ int main() {
     //EllipseTest();
     //DifferentShapesTest();
     //PolygonTest2();
-    //RectangleTest();
-    TriangleTest();
+    RectangleTest();
     return 0;
 }
