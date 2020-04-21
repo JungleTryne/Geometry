@@ -20,7 +20,7 @@ void PointTest() {
     }
 
     if (!(std::abs(x.getLength() - 5.0) < eps &&
-        std::abs(t.getLength() - 5.0) < eps))
+          std::abs(t.getLength() - 5.0) < eps))
     {
         warn("Не прошел тест getLength()");
     }
@@ -253,6 +253,18 @@ void RectangleTest() {
 
 }
 
+void TriangleTest() {
+
+    Ellipse el(Point(0,0), Point(0,0), 10);
+    Ellipse el1(Point(3,3), Point(3,3), 10);
+    Circle c(Point(3,3), 5);
+    std::cout << (el == el1) << std::endl;
+    std::cout << el1.isCongruentTo(el) << std::endl;
+    std::cout << el1.isSimilarTo(el) << std::endl;
+    std::cout << (el1 == c) << std::endl;
+
+}
+
 int main() {
     //PointTest();
     //LineTest();
@@ -260,6 +272,7 @@ int main() {
     //EllipseTest();
     //DifferentShapesTest();
     //PolygonTest2();
-    RectangleTest();
+    //RectangleTest();
+    TriangleTest();
     return 0;
 }
