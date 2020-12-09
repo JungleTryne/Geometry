@@ -1,1 +1,0 @@
-/usr/bin/c++  -g -fno-omit-frame-pointer -fsanitize=address -Wall   CMakeFiles/GeometricShapes.dir/main.cpp.o  -o GeometricShapes 
